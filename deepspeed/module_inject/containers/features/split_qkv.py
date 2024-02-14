@@ -47,7 +47,7 @@ class HybridSplitQKVContainer(HybridEngineContainer):
                     continue
                 dst = mp_replace.copy(
                     dst[:self.qw.shape[0] // mp_replace.mp_size], src, int8=reversed_dim,
-                    allocate_tensor=True)
+                    allocate_tensor=reversed_dim)
                 setattr(self.module.attention, name, dst)
         else:
             super().attention_qkv_mp(mp_replace)
