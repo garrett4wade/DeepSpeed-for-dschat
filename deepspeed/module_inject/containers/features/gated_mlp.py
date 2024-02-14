@@ -37,16 +37,20 @@ class HybridGatedMLPContainer(HybridEngineContainer):
         # Only need to alter behavior if we can't do the normal destructive copy
         if self.module.mlp.inter_w is None:
             params = [
-                (self.module.mlp.inter_up_w, self.inter_up_w),
-                (self.module.mlp.inter_up_b, self.inter_up_b),
-                (self.module.mlp.inter_gate_w, self.inter_gate_w),
-                (self.module.mlp.inter_gate_b, self.inter_gate_b),
+                (self.module.mlp.inter_up_w, self.inter_up_w, "inter_up_w"),
+                (self.module.mlp.inter_up_b, self.inter_up_b, "inter_up_b"),
+                (self.module.mlp.inter_gate_w, self.inter_gate_w, "inter_gate_w"),
+                (self.module.mlp.inter_gate_b, self.inter_gate_b, "inter_gate_b"),
             ]
-            for dst, src in params:
+            for dst, src, name in params:
+                if src is None:
+                    setattr(self.module.mlp, name, None)
+                    continue
                 dst = mp_replace.copy(dst[:self.inter_up_w.shape[0] // mp_replace.mp_size],
                                       src,
                                       int8=reversed_dim,
-                                      allocate_tensor=reversed_dim) if src is not None else None
+                                      allocate_tensor=True)
+                setattr(self.module.mlp, name, dst)
         else:
             self.module.mlp.inter_w = mp_replace.strided_copy(self.module.mlp.inter_w,
                                                               self._h4h_w,

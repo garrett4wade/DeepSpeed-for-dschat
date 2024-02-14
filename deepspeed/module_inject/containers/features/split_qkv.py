@@ -34,17 +34,21 @@ class HybridSplitQKVContainer(HybridEngineContainer):
         # Only need to alter
         if self.module.attention.attn_qkvw is None:
             params = [
-                (self.module.attention.attn_qw, self.qw),
-                (self.module.attention.attn_qb, self.qb),
-                (self.module.attention.attn_kw, self.kw),
-                (self.module.attention.attn_kb, self.kb),
-                (self.module.attention.attn_vw, self.vw),
-                (self.module.attention.attn_vb, self.vb),
+                (self.module.attention.attn_qw, self.qw, "attn_qw"),
+                (self.module.attention.attn_qb, self.qb, "attn_qb"),
+                (self.module.attention.attn_kw, self.kw, "attn_kw"),
+                (self.module.attention.attn_kb, self.kb, "attn_kb"),
+                (self.module.attention.attn_vw, self.vw, "attn_vw"),
+                (self.module.attention.attn_vb, self.vb, "attn_vb"),
             ]
-            for dst, src in params:
+            for dst, src, name in params:
+                if src is None:
+                    setattr(self.module.attention, name, None)
+                    continue
                 dst = mp_replace.copy(
                     dst[:self.qw.shape[0] // mp_replace.mp_size], src, int8=reversed_dim,
-                    allocate_tensor=reversed_dim) if src is not None else None
+                    allocate_tensor=True)
+                setattr(self.module.attention, name, dst)
         else:
             super().attention_qkv_mp(mp_replace)
 
