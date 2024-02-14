@@ -49,7 +49,7 @@ class HybridGatedMLPContainer(HybridEngineContainer):
                 dst = mp_replace.copy(dst[:self.inter_up_w.shape[0] // mp_replace.mp_size],
                                       src,
                                       int8=reversed_dim,
-                                      allocate_tensor=True)
+                                      allocate_tensor=reversed_dim)
                 setattr(self.module.mlp, name, dst)
         else:
             self.module.mlp.inter_w = mp_replace.strided_copy(self.module.mlp.inter_w,
