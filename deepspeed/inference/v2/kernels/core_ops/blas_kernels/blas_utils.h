@@ -160,12 +160,12 @@ int blas_gemm_ex(void* C,
 #else
     if (status != CUBLAS_STATUS_SUCCESS) {
 #endif
-        fprintf(stderr,
-                "!!!! kernel execution error. (m: %d, n: %d, k: %d, error: %d) \n",
-                m,
-                n,
-                k,
-                (int)status);
+        // fprintf(stderr,
+        //         "!!!! kernel execution error. (m: %d, n: %d, k: %d, error: %d) \n",
+        //         m,
+        //         n,
+        //         k,
+        //         (int)status);
         return EXIT_FAILURE;
     }
     return 0;
@@ -262,13 +262,13 @@ int blas_strided_batched_gemm(void* C,
 #else
     if (status != CUBLAS_STATUS_SUCCESS) {
 #endif
-        fprintf(stderr,
-                "!!!! kernel execution error. (batch: %d, m: %d, n: %d, k: %d, error: %d) \n",
-                batch,
-                m,
-                n,
-                k,
-                (int)status);
+        // fprintf(stderr,
+        //         "!!!! kernel execution error. (batch: %d, m: %d, n: %d, k: %d, error: %d) \n",
+        //         batch,
+        //         m,
+        //         n,
+        //         k,
+        //         (int)status);
         return EXIT_FAILURE;
     }
     return 0;

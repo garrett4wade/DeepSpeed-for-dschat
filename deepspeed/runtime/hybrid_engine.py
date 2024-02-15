@@ -205,6 +205,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
                             # if self.mpu is not None:
                             self._inference_containers[layer_id].apply_tensor_parallelism(self.mp_replace,
                                                                                             reversed_dim=True)
+                        dist.barrier()
 
                 # TODO(cmikeh2) Evaluate if this can be deferred when release_inference_cache
                 # is enabled.
@@ -241,7 +242,9 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
 
                 non_active_params = get_inactive_params(non_tp_params)
                 with GatheredParameters(non_active_params):
+                    dist.barrier()
                     generate_ret_vals = self._generate(*inputs, **kwargs)
+                    dist.barrier()
 
                 for layer_id in range(len(self.layer_params)):
                     self._inference_containers[layer_id].release_memory()
@@ -254,6 +257,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
                 non_active_lora_params = get_inactive_params(self.all_lora_params)
                 non_active_layers.extend(non_active_lora_params)
                 with GatheredParameters(non_active_layers):
+                    dist.barrier()
                     self._gather_latency = time.time() - self._t0
 
                     if len(self.all_lora_params) > 0:
@@ -264,6 +268,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
 
                     if len(self.all_lora_params) > 0:
                         self.unfuse_lora_weight()
+                    dist.barrier()
         else:
             if len(self.all_lora_params) > 0 and (not self.Z3_enabled):
                 self.fuse_lora_weight()

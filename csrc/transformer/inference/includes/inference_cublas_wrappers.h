@@ -101,12 +101,12 @@ int cublas_gemm_ex(cublasHandle_t handle,
 #else
     if (status != CUBLAS_STATUS_SUCCESS) {
 #endif
-        fprintf(stderr,
-                "!!!! kernel execution error. (m: %d, n: %d, k: %d, error: %d) \n",
-                m,
-                n,
-                k,
-                (int)status);
+        // fprintf(stderr,
+        //         "!!!! kernel execution error. (m: %d, n: %d, k: %d, error: %d) \n",
+        //         m,
+        //         n,
+        //         k,
+        //         (int)status);
         return EXIT_FAILURE;
     }
     return 0;
@@ -199,12 +199,12 @@ int cublas_gemm_ex(cublasHandle_t handle,
 #else
     if (status != CUBLAS_STATUS_SUCCESS) {
 #endif
-        fprintf(stderr,
-                "!!!! kernel execution error. (m: %d, n: %d, k: %d, error: %d) \n",
-                m,
-                n,
-                k,
-                (int)status);
+        // fprintf(stderr,
+        //         "!!!! kernel execution error. (m: %d, n: %d, k: %d, error: %d) \n",
+        //         m,
+        //         n,
+        //         k,
+        //         (int)status);
         return EXIT_FAILURE;
     }
     return 0;
@@ -308,13 +308,13 @@ int cublas_strided_batched_gemm(cublasHandle_t handle,
 #else
     if (status != CUBLAS_STATUS_SUCCESS) {
 #endif
-        fprintf(stderr,
-                "!!!! kernel execution error. (batch: %d, m: %d, n: %d, k: %d, error: %d) \n",
-                batch,
-                m,
-                n,
-                k,
-                (int)status);
+        // fprintf(stderr,
+        //         "!!!! kernel execution error. (batch: %d, m: %d, n: %d, k: %d, error: %d) \n",
+        //         batch,
+        //         m,
+        //         n,
+        //         k,
+        //         (int)status);
         return EXIT_FAILURE;
     }
     return 0;
@@ -422,12 +422,12 @@ int cublas_strided_batched_gemm(cublasHandle_t handle,
 #else
     if (status != CUBLAS_STATUS_SUCCESS) {
 #endif
-        fprintf(stderr,
-                "!!!! kernel execution error. (m: %d, n: %d, k: %d, error: %d) \n",
-                m,
-                n,
-                k,
-                (int)status);
+        // fprintf(stderr,
+        //         "!!!! kernel execution error. (m: %d, n: %d, k: %d, error: %d) \n",
+        //         m,
+        //         n,
+        //         k,
+        //         (int)status);
         return EXIT_FAILURE;
     }
 

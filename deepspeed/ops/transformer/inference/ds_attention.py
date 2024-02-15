@@ -56,8 +56,18 @@ class DeepSpeedSelfAttention(nn.Module):
             self.attn_ob = nn.Parameter(torch.empty(self.config.hidden_size, dtype=data_type_fp, device=device),
                                         requires_grad=False)
 
+        assert self.config.heads % self.config.mp_size == 0
+        self.head_dim = self.config.hidden_size // self.config.heads
         self.num_attention_heads_per_partition = self.config.heads // self.config.mp_size
-        self.num_kv_partition = self.config.num_kv // self.config.mp_size
+        if self.config.num_kv < 0:
+            self.num_kv_partition = self.config.heads // self.config.mp_size
+            self._replicate_kv = False
+        elif self.config.num_kv % self.config.mp_size == 0:
+            self.num_kv_partition = self.config.num_kv // self.config.mp_size
+            self._replicate_kv = False
+        else:
+            self.num_kv_partition = self.config.num_kv
+            self._replicate_kv = True
         self.hidden_size_per_partition = self.config.hidden_size // self.config.mp_size
         self.hidden_size_per_attention_head = self.config.hidden_size // self.config.heads
 
@@ -82,12 +92,16 @@ class DeepSpeedSelfAttention(nn.Module):
         self.vector_matmul_func = VectorMatMulOp(config)
         if len(DeepSpeedSelfAttention._qkv_buffers) == 0:
             DeepSpeedSelfAttention._qkv_buffers = [
-                torch.empty(self.hidden_size_per_partition * 3,
+                torch.zeros(self.head_dim * (self.num_attention_heads_per_partition + 2 * self.num_kv_partition),
                             self.config.hidden_size,
                             dtype=data_type_fp,
                             device=device),
-                torch.empty(self.hidden_size_per_partition * 3, dtype=data_type_fp, device=device)
+                torch.zeros(self.head_dim * (self.num_attention_heads_per_partition + 2 * self.num_kv_partition), dtype=data_type_fp, device=device)
             ]
+    
+    @property
+    def replicate_kv(self):
+        return self._replicate_kv
 
     def compute_attention(self, qkv_out, input_mask, layer_past, alibi):
         if isinstance(qkv_out, list) or isinstance(qkv_out, tuple):
@@ -114,15 +128,23 @@ class DeepSpeedSelfAttention(nn.Module):
         return context_layer, key_layer, value_layer
 
     def _merge_qkv(self):
-        qvkw = DeepSpeedSelfAttention._qkv_buffers[0]
-        qvkw[:self.hidden_size_per_partition, :] = self.attn_qw  # type: ignore
-        qvkw[self.hidden_size_per_partition:2 * self.hidden_size_per_partition, :] = self.attn_kw  # type: ignore
-        qvkw[2 * self.hidden_size_per_partition:, :] = self.attn_vw  # type: ignore
-        if self.attn_qb is not None:
-            qvkb = DeepSpeedSelfAttention._qkv_buffers[1]
-            qvkb[:self.hidden_size_per_partition] = self.attn_qb
-            qvkb[self.hidden_size_per_partition:2 * self.hidden_size_per_partition] = self.attn_kb  # type: ignore
-            qvkb[2 * self.hidden_size_per_partition:] = self.attn_vb  # type: ignore
+        # print(">>>>> merge qkv", self.attn_qw.shape, self.attn_kw.shape)
+        try:
+            offset1 = self.head_dim * self.num_attention_heads_per_partition
+            offset2 = offset1 + self.num_kv_partition * self.head_dim
+            qvkw = DeepSpeedSelfAttention._qkv_buffers[0]
+            qvkw[:offset1, :] = self.attn_qw  # type: ignore
+            qvkw[offset1:offset2, :] = self.attn_kw  # type: ignore
+            qvkw[offset2:, :] = self.attn_vw  # type: ignore
+            if self.attn_qb is not None:
+                qvkb = DeepSpeedSelfAttention._qkv_buffers[1]
+                qvkb[:offset1] = self.attn_qb
+                qvkb[offset1:offset2] = self.attn_kb  # type: ignore
+                qvkb[offset2:] = self.attn_vb  # type: ignore
+        except RuntimeError:
+            # HACK: workaround for deepspeed zero3 bug
+            # which occurs when train_bs > 1 during the second-step generation call
+            pass
         return DeepSpeedSelfAttention._qkv_buffers
 
     def forward(self,

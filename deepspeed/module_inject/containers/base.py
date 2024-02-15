@@ -40,6 +40,7 @@ class BaseTransformerContainer(ABC):
         self.hidden_size = None
         self.intermediate_size = None
         self.num_attention_heads = None
+        self.num_key_value_heads = None
         self.mp_size = self.config.tensor_parallel.tp_size
         self.pre_layer_norm = self.model_config.do_layer_norm_before if \
             hasattr(self.model_config, 'do_layer_norm_before') else self.policy.pre_attn_norm
@@ -117,7 +118,8 @@ class BaseTransformerContainer(ABC):
             set_empty_params=self.config.set_empty_params,
             transposed_mode=self.config.transposed_mode,
             use_triton=self.use_triton,
-            triton_autotune=self.config.triton_autotune)
+            triton_autotune=self.config.triton_autotune,
+            num_kv=self.num_key_value_heads)
 
         if self.use_triton and deepspeed.HAS_TRITON:
             from .bert import DS_BERTContainer
@@ -187,7 +189,12 @@ class BaseTransformerContainer(ABC):
             self.intermediate_size = 4 * hidden_size
         else:
             self.intermediate_size = intermediate_size
-        self.num_attention_heads = num_attention_heads
+        if isinstance(num_attention_heads, tuple):
+            self.num_attention_heads = num_attention_heads[0]
+            self.num_key_value_heads = num_attention_heads[1]
+        else:
+            self.num_attention_heads = num_attention_heads
+            self.num_key_value_heads = -1
         self.layernorm_epsilon = epsilon
 
     def set_attention(self, qkvw, qkvb, dense_w, dense_b):

@@ -131,7 +131,7 @@ class LLAMALayerPolicy(TransformerPolicy):
         hidden_heads = (
             getattr(self.client_module.self_attn.q_proj.weight, "ds_shape",
                     self.client_module.self_attn.q_proj.weight.shape)[1],
-            self.client_module.self_attn.num_heads,
+            (self.client_module.self_attn.num_heads, self.client_module.self_attn.num_key_value_heads),
             self.client_module.input_layernorm.variance_epsilon,
             getattr(self.client_module.mlp.gate_proj.weight, "ds_shape",
                     self.client_module.mlp.gate_proj.weight.shape)[0],

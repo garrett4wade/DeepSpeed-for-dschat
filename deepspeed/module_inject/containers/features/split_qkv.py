@@ -41,14 +41,25 @@ class HybridSplitQKVContainer(HybridEngineContainer):
                 (self.module.attention.attn_vw, self.vw, "attn_vw"),
                 (self.module.attention.attn_vb, self.vb, "attn_vb"),
             ]
-            for dst, src, name in params:
-                if src is None:
-                    setattr(self.module.attention, name, None)
-                    continue
-                dst = mp_replace.copy(
-                    dst[:self.qw.shape[0] // mp_replace.mp_size], src, int8=reversed_dim,
-                    allocate_tensor=reversed_dim)
-                setattr(self.module.attention, name, dst)
+            for i, (dst, src, name) in enumerate(params):
+                try:
+                    if src is None:
+                        setattr(self.module.attention, name, None)
+                        continue
+                    # print(f"<<<<<<<<<<<<< copy {name} with shape {src.shape} target shape {dst.shape}, {src.shape[0] // mp_replace.mp_size}")
+                    if not self.module.attention.replicate_kv or i <= 1:
+                        dst = mp_replace.copy(
+                            dst[:src.shape[0] // mp_replace.mp_size], src, int8=reversed_dim,
+                            allocate_tensor=reversed_dim)
+                    else:
+                        dst = mp_replace.copy(
+                            dst[:], src, int8=reversed_dim,
+                            allocate_tensor=reversed_dim)
+                    setattr(self.module.attention, name, dst)
+                except RuntimeError:
+                    # HACK: workaround for deepspeed zero3 bug
+                    # which occurs when train_bs > 1 during the second-step generation call
+                    pass
         else:
             super().attention_qkv_mp(mp_replace)
 
