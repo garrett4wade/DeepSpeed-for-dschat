@@ -63,6 +63,21 @@ class HybridSplitQKVContainer(HybridEngineContainer):
         else:
             super().attention_qkv_mp(mp_replace)
 
+    def attention_o_mp(self, mp_replace, reversed_dim=False):
+        self.module.attention.attn_ow = mp_replace.copy(
+            self.module.attention.attn_ow[:, :self.dense_w.shape[0] // mp_replace.mp_size],
+            self.dense_w,
+            int8=reversed_dim,
+            allocate_tensor=reversed_dim,
+        )
+        if self.dense_b is not None:
+            self.module.attention.attn_ob = mp_replace.copy(
+                self.module.attention.attn_ob[:self.dense_b.shape[0] // mp_replace.mp_size],
+                self.dense_b,
+                int8=reversed_dim,
+                allocate_tensor=reversed_dim,
+            )
+
     def release_qkv(self):
         super().release_qkv()
         split_qkv_params = [

@@ -178,17 +178,28 @@ class DeepSpeedSelfAttention(nn.Module):
                                     bias=self._attn_qkvb,
                                     gamma=norm_w,
                                     beta=norm_b)
+            # if dist.get_rank() == 0:
+            #     print(">>>>>>>", input.shape, self._attn_qkvw.shape, norm_w.shape, "/// output /// ", qkv_out[-1].shape, self.attn_ow.shape, flush=True)
+            # if dist.get_rank() == 0:
+            #     print(">>>>>>> after qkv linear", flush=True)
 
         context_layer, key_layer, value_layer = self.compute_attention(qkv_out=qkv_out,
                                                                        input_mask=input_mask,
                                                                        layer_past=layer_past,
                                                                        alibi=alibi)
+        # if dist.get_rank() == 0:
+        #     print(">>>> attn out shape", context_layer.shape, key_layer.shape, value_layer.shape)
+        #     print(">>>>>>> after computing attention", flush=True)
 
         output = self.vector_matmul_func(input=context_layer, weight=self.attn_ow)
         inp_norm = qkv_out[-1]
+        # if dist.get_rank() == 0:
+        #     print(f">>>>>>> after attention out proj {output.shape}", flush=True)
 
         if self.config.mlp_after_attn and self.mp_group is not None and dist.get_world_size(group=self.mp_group) > 1:
             dist.all_reduce(output, group=self.mp_group)
+        # if dist.get_rank() == 0:
+        #     print(">>>>>>> after attention", flush=True)
         return (output, key_layer, value_layer, context_layer, inp_norm)
 
 

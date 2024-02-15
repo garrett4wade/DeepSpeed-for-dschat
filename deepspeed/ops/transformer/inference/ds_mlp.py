@@ -74,8 +74,8 @@ class DeepSpeedMLP(nn.Module):
 
         if len(DeepSpeedMLP._inter_w_buffers) == 0:
             DeepSpeedMLP._inter_w_buffers = [
-                torch.empty(self.intm_w_sz_per_partition, self.config.hidden_size, dtype=data_type, device=device),
-                torch.empty(self.intm_w_sz_per_partition, dtype=data_type_fp, device=device)
+                torch.zeros(self.intm_w_sz_per_partition, self.config.hidden_size, dtype=data_type, device=device),
+                torch.zeros(self.intm_w_sz_per_partition, dtype=data_type_fp, device=device)
             ]
 
     def _merge_inter_w(self):
@@ -110,6 +110,7 @@ class DeepSpeedMLP(nn.Module):
                                                       bias=self._inter_b,
                                                       gamma=self.attn_nw,
                                                       beta=self.attn_nb)
+        # print(f">>>>> mlp output shape {output.shape}; others {self.attn_nw is None} {residual_norm.shape} {self._inter_w.shape} {self.output_w.shape} {self.attn_nw.shape}")
 
         residual = self.residual_add_func(hidden_state=output,
                                           residual=residual,

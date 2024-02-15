@@ -46,7 +46,7 @@ class HybridGatedMLPContainer(HybridEngineContainer):
                 if src is None:
                     setattr(self.module.mlp, name, None)
                     continue
-                dst = mp_replace.copy(dst[:self.inter_up_w.shape[0] // mp_replace.mp_size],
+                dst = mp_replace.copy(dst[:src.shape[0] // mp_replace.mp_size],
                                       src,
                                       int8=reversed_dim,
                                       allocate_tensor=reversed_dim)
@@ -60,6 +60,21 @@ class HybridGatedMLPContainer(HybridEngineContainer):
                                                               self._h4h_b,
                                                               num_splits=2,
                                                               int8=reversed_dim)
+    
+    def mlp_output_mp(self, mp_replace, reversed_dim=False):
+        self.module.mlp.output_w = mp_replace.copy(
+            self.module.mlp.output_w[:, :self._4hh_w.shape[0] // mp_replace.mp_size],
+            self._4hh_w,
+            int8=reversed_dim,
+            allocate_tensor=reversed_dim,
+        )
+        if self._4hh_b is not None:
+            self.module.mlp.dense_b = mp_replace.copy(
+                self.module.mlp.dense_b[:self._4hh_b.shape[0] // mp_replace.mp_size],
+                self._4hh_b,
+                int8=reversed_dim,
+                allocate_tensor=reversed_dim,
+            )
 
     def release_mlp(self):
         super().release_mlp()
